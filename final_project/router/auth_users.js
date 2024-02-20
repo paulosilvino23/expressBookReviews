@@ -68,11 +68,7 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
   // User is logged in
   const isbn = req.params.isbn;
 
-  console.log(isbn);
-  console.log(books);
-
   let book = books[isbn];
-  console.log(book);
 
   let oldReview, newReview, loggedUser;
 
@@ -88,13 +84,43 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
 
   book.reviews[loggedUser] = newReview;
 
-  
-  console.log("Book......: " + JSON.stringify(book));
-  console.log("OldReview.: " + JSON.stringify(oldReview));
-  console.log("NewReview.: " + JSON.stringify(newReview));
-
   return res.status(200).json({})
 
+});
+
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+
+  if(req.session.authorization) {
+    token = req.session.authorization['accessToken'];
+    jwt.verify(token, "access",(err,user)=>{
+        if(!err){
+            req.user = user;
+        }
+        else{
+            return res.status(403).json({message: "User not authenticated"})
+        }
+    });
+  } else {
+      return res.status(403).json({message: "User not logged in"})
+  }
+
+  // User is logged in
+  const isbn = req.params.isbn;
+
+  let book = books[isbn];
+
+  // Book does not exists, return error
+  if (!book) {
+    return res.status(404).json({message: "Book not found"})
+  }
+
+  loggedUser = req.user.data;
+
+  delete books[isbn].reviews[loggedUser];
+
+  return res.status(200).json({})
+  
 });
 
 module.exports.authenticated = regd_users;
