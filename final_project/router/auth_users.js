@@ -6,15 +6,12 @@ const regd_users = express.Router();
 let users = [];
 
 const isValid = (username)=>{ //returns boolean
-
-  return true;
-
-  // var validFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-  // if (username !== '' && username.match(validFormat)) {
-  //   return true;
-  // }
   
-  // return false;
+  if (username.length > 30) {
+    return false;
+  }
+  
+  return true;
 }
 
 const authenticatedUser = (username,password)=>{ //returns boolean
@@ -39,7 +36,7 @@ regd_users.post("/login", (req,res) => {
 
   if (authenticatedUser(username,password)) {
     let accessToken = jwt.sign({
-      data: password
+      data: username
     }, 'access', { expiresIn: 60 });
 
     req.session.authorization = {
@@ -53,8 +50,51 @@ regd_users.post("/login", (req,res) => {
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+  
+  if(req.session.authorization) {
+      token = req.session.authorization['accessToken'];
+      jwt.verify(token, "access",(err,user)=>{
+          if(!err){
+              req.user = user;
+          }
+          else{
+              return res.status(403).json({message: "User not authenticated"})
+          }
+      });
+  } else {
+      return res.status(403).json({message: "User not logged in"})
+  }
+
+  // User is logged in
+  const isbn = req.params.isbn;
+
+  console.log(isbn);
+  console.log(books);
+
+  let book = books[isbn];
+  console.log(book);
+
+  let oldReview, newReview, loggedUser;
+
+  // Book does not exists, return error
+  if (!book) {
+    return res.status(404).json({message: "Book not found"})
+  }
+
+  loggedUser = req.user.data;
+
+  oldReview = book.reviews[loggedUser];
+  newReview = req.body.review;
+
+  book.reviews[loggedUser] = newReview;
+
+  
+  console.log("Book......: " + JSON.stringify(book));
+  console.log("OldReview.: " + JSON.stringify(oldReview));
+  console.log("NewReview.: " + JSON.stringify(newReview));
+
+  return res.status(200).json({})
+
 });
 
 module.exports.authenticated = regd_users;
